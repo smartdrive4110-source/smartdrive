@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Smart Drive</title>
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      background:#070607;
+      color:#e6e1dc;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:2.5rem;
+      line-height:1.5;
+    }
+
+    .container{max-width:1200px;margin:0 auto}
+
+    .header{
+      display:flex;justify-content:space-between;align-items:center;padding:1rem 0 1.5rem;border-bottom:1px solid rgba(255,255,255,0.03)
+    }
+    .brand{display:flex;align-items:center;gap:14px}
+    .brand h1{font-family: 'Georgia', serif;font-weight:400;font-size:1.35rem;color:#f6f3ee}
+    .brand .subtitle{color:#b8b3a8;font-size:0.85rem}
+    .header-right{display:flex;align-items:center;gap:20px}
+    .user-info{display:flex;align-items:center;gap:10px}
+    .user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2)}
+    .user-name{color:#efece6;font-size:0.9rem;font-weight:500}
+    .stats{color:#9b9386;font-size:0.9rem}
+    .cloud-status{
+      display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
+      background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.3);
+      border-radius:6px;color:#4caf50;font-size:0.85rem;margin-left:12px;
+    }
+    .logout-btn{
+      padding:8px 16px;
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:6px;
+      color:#b8b3a8;
+      cursor:pointer;
+      font-size:0.9rem;
+      transition:all 0.2s;
+    }
+    .logout-btn:hover{
+      background:rgba(255,255,255,0.05);
+      border-color:rgba(255,255,255,0.2);
+      color:#efece6;
+    }
+
+    .main{display:grid;grid-template-columns:260px 1fr;gap:20px;margin-top:1.25rem}
+
+    .sidebar{background:#0b0a0b;border:1px solid rgba(255,255,255,0.02);padding:18px;border-radius:10px}
+    .btn{background:#efece6;color:#080708;border:none;padding:0.7rem 1rem;border-radius:8px;font-weight:600;cursor:pointer;width:100%}
+    .btn:disabled{opacity:0.5;cursor:not-allowed}
+    .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#b8b3a8}
+    .folder-list{list-style:none;margin-top:14px;padding-left:0}
+    .folder-item{padding:10px;border-radius:8px;color:#cfc7bc;cursor:pointer;display:block}
+    .folder-item.active{background:linear-gradient(90deg,#2b2548,#4b3a6a);color:#fff}
+
+    .content{display:flex;flex-direction:column;gap:16px}
+    .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .search{flex:1;min-width:200px}
+    .search input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:#0b0a0b;color:#efece6}
+    select{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:#0b0a0b;color:#efece6}
+    .view-toggle{display:flex;gap:8px}
+    .view-btn{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:#b8b3a8;cursor:pointer}
+    .view-btn.active{background:#efece6;color:#080708}
+
+    .upload-area{background:#0b0a0b;border:2px dashed rgba(255,255,255,0.03);padding:38px;border-radius:8px;text-align:center;cursor:pointer}
+    .upload-area.drag-active{border-color:#d4af37;background:rgba(212,175,55,0.04)}
+    .upload-area h3{color:#efece6;margin-bottom:8px}
+    .upload-area p{color:#9b9386;margin-bottom:12px}
+
+    .files-container{background:#0b0a0b;border:1px solid rgba(255,255,255,0.02);padding:18px;border-radius:10px}
+    .files-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+    .files-list{display:flex;flex-direction:column;gap:8px}
+    .file-card{background:transparent;border:1px solid rgba(255,255,255,0.02);padding:14px;border-radius:8px;text-align:left;position:relative}
+    .file-name{color:#efece6;font-weight:600;margin-bottom:6px;word-break:break-word}
+    .file-size{color:#9b9386;font-size:0.9rem;margin-bottom:4px}
+    .file-timestamp{color:#7b7268;font-size:0.8rem;margin-bottom:8px}
+    .file-actions{display:flex;gap:8px}
+    .file-action-btn{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:#b8b3a8;cursor:pointer;font-size:0.85rem}
+    .cloud-badge{
+      position:absolute;top:8px;right:8px;
+      background:rgba(33,150,243,0.2);border:1px solid rgba(33,150,243,0.4);
+      padding:2px 6px;border-radius:4px;font-size:0.75rem;color:#2196f3;
+    }
+
+    .empty{padding:28px;text-align:center;color:#7b7268;border-radius:8px;border:1px solid rgba(255,255,255,0.02)}
+
+    .progress-bar{
+      width:100%;height:4px;background:rgba(255,255,255,0.05);
+      border-radius:2px;overflow:hidden;margin-top:8px;
+    }
+    .progress-fill{
+      height:100%;background:linear-gradient(90deg,#d4af37,#f4d03f);
+      transition:width 0.3s ease;
+    }
+
+    @media (max-width:900px){.main{grid-template-columns:1fr;}.sidebar{order:2}.content{order:1}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="brand">
+        <h1>Smart Drive</h1>
+        <div class="subtitle">Cloud-Powered File Management</div>
+        <div class="cloud-status" id="cloudStatus">
+          <span>⚡</span>
+          <span>Connecting...</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="user-info">
+          <img id="userAvatar" class="user-avatar" src="" alt="" style="display:none">
+          <div id="userAvatarPlaceholder" class="user-avatar"></div>
+          <span class="user-name" id="userName">Loading...</span>
+        </div>
+        <div class="stats"><span id="fileCount">0</span> files • <span id="totalSize">0 B</span></div>
+        <button class="logout-btn" id="logoutBtn">Logout</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <aside class="sidebar">
+        <button class="btn" id="uploadBtnLeft">Upload to Cloud</button>
+        <button class="btn secondary" id="syncBtn" style="margin-top:10px">Sync from Cloud</button>
+
+        <ul class="folder-list" id="folderList" style="margin-top:18px">
+          <li class="folder-item active" data-folder="All Files">All Files <small style="float:right;color:#7b7268"> (0)</small></li>
+          <li class="folder-item" data-folder="MS Word">MS Word <small style="float:right;color:#7b7268"> (0)</small></li>
+          <li class="folder-item" data-folder="MS Excel">MS Excel <small style="float:right;color:#7b7268"> (0)</small></li>
+          <li class="folder-item" data-folder="PDF">PDF <small style="float:right;color:#7b7268"> (0)</small></li>
+          <li class="folder-item" data-folder="Audio">Audio <small style="float:right;color:#7b7268"> (0)</small></li>
+          <li class="folder-item" data-folder="Video">Video <small style="float:right;color:#7b7268"> (0)</small></li>
+          <li class="folder-item" data-folder="Images">Images <small style="float:right;color:#7b7268"> (0)</small></li>
+          <li class="folder-item" data-folder="Archives">Archives <small style="float:right;color:#7b7268"> (0)</small></li>
+          <li class="folder-item" data-folder="Code">Code <small style="float:right;color:#7b7268"> (0)</small></li>
+        </ul>
+      </aside>
+
+      <section class="content">
+        <div class="controls">
+          <div class="search"><input id="searchInput" type="text" placeholder="Search files..."></div>
+          <select id="sortBy">
+            <option value="name">Name</option>
+            <option value="size">Size</option>
+            <option value="uploadDate">Latest Upload</option>
+            <option value="lastVisited">Last Visited</option>
+          </select>
+          <div class="view-toggle"><button class="view-btn active" id="gridViewBtn">Grid</button><button class="view-btn" id="listViewBtn">List</button></div>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+          <h3>Drop files to upload</h3>
+          <p>Files will be stored securely in your private cloud space</p>
+          <button class="btn" id="chooseFilesTop">Choose Files</button>
+          <input type="file" id="fileInput" multiple style="display:none">
+          <div class="progress-bar" id="uploadProgress" style="display:none">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+        </div>
+
+        <div class="files-container">
+          <div id="filesDisplay" class="files-grid">
+            <div class="empty">Loading your files from cloud...</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <!-- AWS SDK -->
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1691.0.min.js"></script>
+
+  <script>
+  // ================================
+  // Firebase Configuration
+  // ================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyAl1BKxNcE5fIU247Y-d_f165zbCVJbWZQ",
+    authDomain: "smartdrive-9d228.firebaseapp.com",
+    projectId: "smartdrive-9d228",
+    storageBucket: "smartdrive-9d228.firebasestorage.app",
+    messagingSenderId: "723826076032",
+    appId: "1:723826076032:web:7eab2aa8fe17d10127f965"
+  };
+
+  // Initialize Firebase
+  let auth;
+  let db;
+  try {
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    console.log('Firebase initialized successfully');
+  } catch (error) {
+    console.error('Firebase init error:', error);
+  }
+
+  // ================================
+  // Inactivity Timeout (2 minutes)
+  // ================================
+  let inactivityTimer;
+  const INACTIVITY_TIMEOUT = 2 * 60 * 1000; // 2 minutes in milliseconds
+
+  function resetInactivityTimer() {
+    clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+      console.log('User inactive for 2 minutes, logging out...');
+      handleLogout();
+    }, INACTIVITY_TIMEOUT);
+  }
+
+  // Track user activity
+  ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'].forEach(event => {
+    document.addEventListener(event, resetInactivityTimer, true);
+  });
+
+  // Start the timer
+  resetInactivityTimer();
+
+  // ================================
+  // Authentication & Security
+  // ================================
+  let isAuthChecked = false;
+  let uid;
+  let currentUser = null;
+
+  // Prevent back button after logout
+  function preventBackButton() {
+    window.history.pushState(null, '', window.location.href);
+    window.onpopstate = function() {
+      window.history.pushState(null, '', window.location.href);
+    };
+  }
+
+  // Check authentication status
+  auth.onAuthStateChanged(user => {
+    if (!user && isAuthChecked) {
+      // User logged out, redirect and prevent back button
+      preventBackButton();
+      window.location.replace('index.html');
+    } else if (!user) {
+      // Not logged in initially, redirect
+      window.location.replace('index.html');
+    } else {
+      isAuthChecked = true;
+      uid = user.uid;
+      currentUser = user;
+      console.log('User logged in:', user.email);
+      
+      // Update user display
+      updateUserDisplay(user);
+      
+      initializeAWS();
+      listenToFiles();
+    }
+  });
+
+  // Update user display in header
+  function updateUserDisplay(user) {
+    const userName = document.getElementById('userName');
+    const userAvatar = document.getElementById('userAvatar');
+    const userAvatarPlaceholder = document.getElementById('userAvatarPlaceholder');
+    
+    // Set display name
+    userName.textContent = user.displayName || user.email.split('@')[0];
+    
+    // Set avatar if available (Google sign-in provides photoURL)
+    if (user.photoURL) {
+      userAvatar.src = user.photoURL;
+      userAvatar.style.display = 'block';
+      userAvatarPlaceholder.style.display = 'none';
+    } else {
+      // Use placeholder with initials
+      const initials = (user.displayName || user.email)
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2);
+      userAvatarPlaceholder.textContent = initials;
+      userAvatarPlaceholder.style.display = 'flex';
+      userAvatarPlaceholder.style.alignItems = 'center';
+      userAvatarPlaceholder.style.justifyContent = 'center';
+      userAvatarPlaceholder.style.fontSize = '0.85rem';
+      userAvatarPlaceholder.style.fontWeight = '600';
+      userAvatarPlaceholder.style.color = '#fff';
+    }
+  }
+
+  // Logout handler
+  async function handleLogout() {
+    try {
+      clearTimeout(inactivityTimer);
+      await auth.signOut();
+      console.log('Logged out successfully');
+      // Clear session storage
+      sessionStorage.clear();
+      localStorage.clear();
+      // Prevent back button and redirect
+      preventBackButton();
+      window.location.replace('index.html');
+    } catch (error) {
+      console.error('Logout error:', error);
+      showNotification('Failed to logout', 3000);
+    }
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+  // ================================
+  // AWS Configuration
+  // ================================
+  const AWS_CONFIG = {
+    region: 'ca-west-1',
+    identityPoolId: 'ca-west-1:99a72b0e-2bbd-4245-8d9e-25d600da4a79',
+    bucketName: 'staas-smart-drive-4110'
+  };
+
+  AWS.config.region = AWS_CONFIG.region;
+  AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+    IdentityPoolId: AWS_CONFIG.identityPoolId
+  });
+
+  const s3 = new AWS.S3({
+    apiVersion: '2006-03-01',
+    params: { Bucket: AWS_CONFIG.bucketName }
+  });
+
+  // ================================
+  // Core Variables
+  // ================================
+  let fileList = [];
+  let currentFolder = 'All Files';
+  let viewMode = 'grid';
+  const fileInput = document.getElementById('fileInput');
+  const uploadArea = document.getElementById('uploadArea');
+  const filesDisplay = document.getElementById('filesDisplay');
+
+  // ================================
+  // Initialize AWS Connection
+  // ================================
+  async function initializeAWS() {
+    try {
+      await new Promise((resolve, reject) => {
+        AWS.config.credentials.get((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
+      updateCloudStatus('connected', 'Cloud Connected');
+      showNotification('✓ Connected to AWS S3');
+    } catch (error) {
+      console.error('AWS initialization error:', error);
+      updateCloudStatus('error', 'Connection Error');
+      showNotification('⚠ Could not connect to AWS. Using local mode.', 4000);
+    }
+  }
+
+  function updateCloudStatus(status, text) {
+    const el = document.getElementById('cloudStatus');
+    const colors = {
+      connected: { bg: 'rgba(76,175,80,0.1)', border: 'rgba(76,175,80,0.3)', color: '#4caf50', icon: '✓' },
+      error: { bg: 'rgba(244,67,54,0.1)', border: 'rgba(244,67,54,0.3)', color: '#f44336', icon: '✗' },
+      syncing: { bg: 'rgba(33,150,243,0.1)', border: 'rgba(33,150,243,0.3)', color: '#2196f3', icon: '↻' }
+    };
+    const c = colors[status] || colors.connected;
+    el.style.background = c.bg;
+    el.style.borderColor = c.border;
+    el.style.color = c.color;
+    el.innerHTML = `<span>${c.icon}</span><span>${text}</span>`;
+  }
+
+  // ================================
+  // Real-time Listener for Firestore (User-Specific)
+  // ================================
+  function listenToFiles() {
+    // IMPORTANT: Only listen to files for the current user
+    db.collection(`users/${uid}/files`).onSnapshot(snapshot => {
+      fileList = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name,
+          size: data.size,
+          type: data.type,
+          folder: data.folder,
+          uploadDate: data.uploadDate.toDate().toISOString(),
+          lastVisited: data.lastVisited.toDate().toISOString(),
+          s3Key: data.s3Key,
+          cloudStored: data.cloudStored,
+          userId: uid // Track which user owns this file
+        };
+      });
+      ensureOtherFolder();
+      updateDisplay();
+      updateCloudStatus('connected', `Cloud Connected (${fileList.length})`);
+    }, error => {
+      console.error('Firestore listener error:', error);
+      showNotification('Failed to load files in real-time', 3000);
+    });
+  }
+
+  // ================================
+  // Sync Files from S3 (Manual: Add missing S3 files to Firestore)
+  // ================================
+  async function syncFromCloud() {
+    updateCloudStatus('syncing', 'Syncing...');
+    try {
+      // List objects with user-specific prefix
+      const userPrefix = `users/${uid}/`;
+      const data = await s3.listObjectsV2({ 
+        Bucket: AWS_CONFIG.bucketName,
+        Prefix: userPrefix 
+      }).promise();
+      
+      const existingFiles = await db.collection(`users/${uid}/files`).get();
+      const existingS3Keys = existingFiles.docs.map(doc => doc.data().s3Key);
+
+      let addedCount = 0;
+      for (const obj of data.Contents) {
+        if (!existingS3Keys.includes(obj.Key)) {
+          const now = new Date(obj.LastModified);
+          const fileName = obj.Key.split('/').pop();
+          const fileData = {
+            name: fileName,
+            size: obj.Size,
+            type: '',
+            folder: categorize(fileName, ''),
+            uploadDate: firebase.firestore.Timestamp.fromDate(now),
+            lastVisited: firebase.firestore.Timestamp.fromDate(now),
+            s3Key: obj.Key,
+            cloudStored: true
+          };
+          await db.collection(`users/${uid}/files`).add(fileData);
+          addedCount++;
+        }
+      }
+
+      showNotification(`Synced ${addedCount} new files from cloud`);
+      updateCloudStatus('connected', `Cloud Connected (${fileList.length})`);
+    } catch (error) {
+      console.error('Sync error:', error);
+      updateCloudStatus('error', 'Sync Failed');
+      showNotification('Failed to sync from cloud', 3000);
+    }
+  }
+
+  // ================================
+  // Upload to S3 and Firestore (User-Specific)
+  // ================================
+  async function uploadToS3(file) {
+    // Store files with user-specific path: users/{uid}/{timestamp}-{filename}
+    const key = `users/${uid}/${Date.now()}-${file.name}`;
+    const params = {
+      Bucket: AWS_CONFIG.bucketName,
+      Key: key,
+      Body: file,
+      ContentType: file.type || 'application/octet-stream'
+    };
+
+    return new Promise((resolve, reject) => {
+      s3.upload(params)
+        .on('httpUploadProgress', (evt) => {
+          const progress = Math.round((evt.loaded / evt.total) * 100);
+          updateUploadProgress(progress);
+        })
+        .send((err, data) => {
+          if (err) reject(err);
+          else resolve({ key, location: data.Location });
+        });
+    });
+  }
+
+  function updateUploadProgress(percent) {
+    const bar = document.getElementById('uploadProgress');
+    const fill = document.getElementById('progressFill');
+    bar.style.display = 'block';
+    fill.style.width = percent + '%';
+    if (percent >= 100) {
+      setTimeout(() => { bar.style.display = 'none'; }, 1000);
+    }
+  }
+
+  // ================================
+  // Handle File Upload
+  // ================================
+  async function handleFiles(list) {
+    if (!list.length) return;
+    
+    updateCloudStatus('syncing', 'Uploading...');
+    
+    for (const file of list) {
+      try {
+        const { key } = await uploadToS3(file);
+        const now = new Date();
+        
+        const fileData = {
+          name: file.name,
+          size: file.size,
+          type: file.type || '',
+          folder: categorize(file.name, file.type),
+          uploadDate: firebase.firestore.Timestamp.fromDate(now),
+          lastVisited: firebase.firestore.Timestamp.fromDate(now),
+          s3Key: key,
+          cloudStored: true
+        };
+        
+        // Store in user-specific collection
+        await db.collection(`users/${uid}/files`).add(fileData);
+        showNotification(`✓ Uploaded: ${file.name}`);
+      } catch (error) {
+        console.error('Upload error:', error);
+        showNotification(`✗ Failed: ${file.name}`, 3000);
+      }
+    }
+    
+    fileInput.value = '';
+    updateCloudStatus('connected', `Cloud Connected (${fileList.length})`);
+  }
+
+  // ================================
+  // Download from S3 (User-Specific)
+  // ================================
+  async function downloadFileById(id) {
+    const f = fileList.find(x => x.id === id);
+    if (!f) return showNotification('File not found');
+
+    // Verify file belongs to current user
+    if (f.userId !== uid) {
+      return showNotification('Access denied: This file does not belong to you', 3000);
+    }
+
+    if (f.cloudStored && f.s3Key) {
+      try {
+        // Update last visited time in Firestore
+        await db.collection(`users/${uid}/files`).doc(id).update({
+          lastVisited: firebase.firestore.Timestamp.now()
+        });
+        
+        const url = s3.getSignedUrl('getObject', {
+          Bucket: AWS_CONFIG.bucketName,
+          Key: f.s3Key,
+          Expires: 60
+        });
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = f.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        
+        showNotification(`⬇ Downloading: ${f.name}`);
+      } catch (error) {
+        console.error('Download error:', error);
+        showNotification('Download failed', 3000);
+      }
+    }
+  }
+
+  // ================================
+  // Delete from S3 and Firestore (User-Specific)
+  // ================================
+  async function deleteFileById(id) {
+    const f = fileList.find(x => x.id === id);
+    if (!f) return showNotification('File not found');
+
+    // Verify file belongs to current user
+    if (f.userId !== uid) {
+      return showNotification('Access denied: This file does not belong to you', 3000);
+    }
+    
+    if (f.cloudStored && f.s3Key) {
+      try {
+        await s3.deleteObject({
+          Bucket: AWS_CONFIG.bucketName,
+          Key: f.s3Key
+        }).promise();
+        
+        await db.collection(`users/${uid}/files`).doc(id).delete();
+        showNotification('✓ Deleted from cloud');
+      } catch (error) {
+        console.error('Delete error:', error);
+        showNotification('Delete failed', 3000);
+      }
+    }
+  }
+
+  // ================================
+  // File Categorization
+  // ================================
+  function categorize(name, type='') {
+    const ext = '.' + name.split('.').pop().toLowerCase();
+    const map = {
+      'MS Word':['.doc','.docx'],
+      'MS Excel':['.xls','.xlsx'],
+      'PDF':['.pdf'],
+      'Audio':['.mp3','.wav','.aac','.flac','.ogg','.m4a'],
+      'Video':['.mp4','.avi','.mov','.mkv','.webm'],
+      'Images':['.jpg','.jpeg','.png','.gif','.bmp','.svg'],
+      'Archives':['.zip','.rar','.7z','.tar','.gz'],
+      'Code':['.js','.py','.java','.cpp','.html','.css','.json']
+    };
+    for (const k in map) if (map[k].includes(ext)) return k;
+    return 'Other';
+  }
+
+  function ensureOtherFolder() {
+    const list = document.getElementById('folderList');
+    if (![...list.children].some(li => li.getAttribute('data-folder') === 'Other')) {
+      const li = document.createElement('li');
+      li.className = 'folder-item';
+      li.setAttribute('data-folder', 'Other');
+      li.innerHTML = 'Other <small style="float:right;color:#7b7268"> (0)</small>';
+      list.appendChild(li);
+    }
+  }
+
+  // ================================
+  // Display Functions
+  // ================================
+  function updateDisplay(){ updateStats(); updateFolderCounts(); renderFiles(); }
+  
+  function updateStats(){
+    document.getElementById('fileCount').textContent = fileList.length;
+    const total = fileList.reduce((s,f)=>s+(f.size||0),0);
+    document.getElementById('totalSize').textContent = formatFileSize(total);
+  }
+  
+  function updateFolderCounts(){
+    document.querySelectorAll('.folder-item').forEach(li=>{
+      const folder = li.getAttribute('data-folder')||'All Files';
+      const count = folder==='All Files'?fileList.length:fileList.filter(f=>f.folder===folder).length;
+      const small = li.querySelector('small');
+      if (small) small.textContent=` (${count})`;
+    });
+  }
+  
+  function formatFileSize(bytes){
+    if (!bytes) return '0 B';
+    const k=1024,sizes=['B','KB','MB','GB','TB'];
+    const i=Math.floor(Math.log(bytes)/Math.log(k));
+    return +(bytes/Math.pow(k,i)).toFixed(2)+' '+sizes[i];
+  }
+
+  function formatTimestamp(isoString) {
+    if (!isoString) return 'Unknown';
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    
+    return date.toLocaleDateString();
+  }
+
+  function renderFiles(){
+    const search=(document.getElementById('searchInput').value||'').toLowerCase().trim();
+    const sortKey=document.getElementById('sortBy').value;
+    let filtered=fileList.filter(f=>(currentFolder==='All Files'||f.folder===currentFolder)&&f.name.toLowerCase().includes(search));
+    
+    // Sorting
+    filtered.sort((a,b)=>{
+      if(sortKey==='name')return a.name.localeCompare(b.name);
+      if(sortKey==='size')return b.size-a.size;
+      if(sortKey==='uploadDate')return new Date(b.uploadDate)-new Date(a.uploadDate);
+      if(sortKey==='lastVisited')return new Date(b.lastVisited)-new Date(a.lastVisited);
+      return 0;
+    });
+    
+    if(!filtered.length){
+      filesDisplay.className='files-grid';
+      filesDisplay.innerHTML='<div class="empty">No files found in your storage</div>';
+      return;
+    }
+    
+    if(viewMode==='grid'){
+      filesDisplay.className='files-grid';
+      filesDisplay.innerHTML = filtered.map(f=>`
+        <div class="file-card">
+          ${f.cloudStored ? '<div class="cloud-badge">☁ Cloud</div>' : ''}
+          <div class="file-name">${escapeHtml(f.name)}</div>
+          <div class="file-size">${formatFileSize(f.size)}</div>
+          <div class="file-timestamp">
+            Uploaded: ${formatTimestamp(f.uploadDate)}<br>
+            Visited: ${formatTimestamp(f.lastVisited)}
+          </div>
+          <div class="file-actions">
+            <button class="file-action-btn btn-info" data-id="${f.id}">Info</button>
+            <button class="file-action-btn btn-download" data-id="${f.id}">Download</button>
+            <button class="file-action-btn btn-delete" data-id="${f.id}">Delete</button>
+          </div>
+        </div>`).join('');
+    }else{
+      filesDisplay.className='files-list';
+      filesDisplay.innerHTML=filtered.map(f=>`
+        <div style="padding:12px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;border:1px solid rgba(255,255,255,0.02)">
+          <div>
+            <div style="font-weight:600;color:#efece6">
+              ${escapeHtml(f.name)} ${f.cloudStored ? '<span style="color:#2196f3;font-size:0.85rem">☁</span>' : ''}
+            </div>
+            <div style="color:#9b9386;font-size:0.9rem">${escapeHtml(f.folder)} • ${formatFileSize(f.size)}</div>
+            <div style="color:#7b7268;font-size:0.8rem">
+              Uploaded: ${formatTimestamp(f.uploadDate)} • Visited: ${formatTimestamp(f.lastVisited)}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="file-action-btn btn-info" data-id="${f.id}">Info</button>
+            <button class="file-action-btn btn-download" data-id="${f.id}">Download</button>
+            <button class="file-action-btn btn-delete" data-id="${f.id}">Delete</button>
+          </div>
+        </div>`).join('');
+    }
+  }
+
+  async function showInfoById(id){
+    const f=fileList.find(x=>x.id===id);
+    if(!f)return showNotification('File not found');
+    
+    // Verify file belongs to current user
+    if (f.userId !== uid) {
+      return showNotification('Access denied: This file does not belong to you', 3000);
+    }
+    
+    // Update last visited time in Firestore
+    await db.collection(`users/${uid}/files`).doc(id).update({
+      lastVisited: firebase.firestore.Timestamp.now()
+    });
+    
+    showNotification(`<strong>${escapeHtml(f.name)}</strong><br>Size: ${formatFileSize(f.size)}<br>Uploaded: ${formatTimestamp(f.uploadDate)}<br>Last Visited: ${formatTimestamp(f.lastVisited)}<br>Storage: ${f.cloudStored ? 'AWS S3 ☁' : 'Local'}<br>Owner: You`,5000);
+  }
+
+  function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  
+  function showNotification(msg,timeout=2500){
+    const el=document.createElement('div');
+    el.style.cssText='background:#0b0a0b;border-left:4px solid #d4af37;padding:12px 16px;color:#efece6;position:fixed;right:20px;top:20px;z-index:9999;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,0.6);max-width:300px';
+    el.innerHTML=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),timeout);
+  }
+
+  // ================================
+  // Event Listeners
+  // ================================
+  document.getElementById('chooseFilesTop').addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.click();
+  });
+  document.getElementById('uploadBtnLeft').addEventListener('click', () => fileInput.click());
+  document.getElementById('syncBtn').addEventListener('click', syncFromCloud);
+
+  fileInput.addEventListener('change', (e) => handleFiles(Array.from(e.target.files)));
+  
+  uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-active'); });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-active'));
+  uploadArea.addEventListener('drop', (e) => { 
+    e.preventDefault(); 
+    uploadArea.classList.remove('drag-active'); 
+    handleFiles(Array.from(e.dataTransfer.files)); 
+  });
+  
+  // Make upload area clickable (but not the button inside)
+  uploadArea.addEventListener('click', (e) => {
+    if (e.target.id !== 'chooseFilesTop' && !e.target.closest('#chooseFilesTop')) {
+      fileInput.click();
+    }
+  });
+
+  // Global drag-over prevention (so browser doesn't open dropped files)
+  document.addEventListener("dragover", (e) => e.preventDefault());
+  document.addEventListener("drop", (e) => {
+    if (!uploadArea.contains(e.target)) e.preventDefault();
+  });
+
+  // Highlight upload area when dragging anywhere
+  document.addEventListener("dragenter", () => {
+    uploadArea.classList.add("drag-active");
+  });
+  document.addEventListener("dragleave", (e) => {
+    if (!uploadArea.contains(e.relatedTarget)) {
+      uploadArea.classList.remove("drag-active");
+    }
+  });
+
+  filesDisplay.addEventListener('click', (e) => {
+    const target = e.target.closest('.file-action-btn');
+    if (!target) return;
+    const id = target.dataset.id;
+    if (target.classList.contains('btn-download')) return downloadFileById(id);
+    if (target.classList.contains('btn-delete')) return deleteFileById(id);
+    if (target.classList.contains('btn-info')) return showInfoById(id);
+  });
+
+  document.getElementById('folderList').addEventListener('click', (e) => {
+    const li = e.target.closest('.folder-item');
+    if (!li) return;
+    document.querySelectorAll('.folder-item').forEach(i => i.classList.remove('active'));
+    li.classList.add('active');
+    currentFolder = li.getAttribute('data-folder') || 'All Files';
+    renderFiles();
+  });
+
+  document.getElementById('gridViewBtn').addEventListener('click',()=>{
+    viewMode='grid';
+    document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('gridViewBtn').classList.add('active');
+    renderFiles();
+  });
+  
+  document.getElementById('listViewBtn').addEventListener('click',()=>{
+    viewMode='list';
+    document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('listViewBtn').classList.add('active');
+    renderFiles();
+  });
+
+  document.getElementById('sortBy').addEventListener('change',renderFiles);
+  
+  let searchTimer;
+  document.getElementById('searchInput').addEventListener('input',()=>{
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(renderFiles,200);
+  });
+
+  // ================================
+  // Initialize
+  // ================================
+  ensureOtherFolder();
+  console.info('STaaS Smart Drive (Multi-User Cloud Edition) initialized');
+  </script>
+</body>
+</html>
