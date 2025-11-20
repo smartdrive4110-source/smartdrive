@@ -545,31 +545,57 @@
       return showNotification('Access denied: This file does not belong to you', 3000);
     }
 
-    if (f.cloudStored && f.s3Key) {
+    if (!f.cloudStored || !f.s3Key) {
+      return showNotification('This file is not stored in cloud yet', 3000);
+    }
+
+    try {
+      // Update last visited time in Firestore
+      await db.collection(`users/${uid}/files`).doc(id).update({
+        lastVisited: firebase.firestore.Timestamp.now()
+      });
+
+      // Get a signed URL and try to stream the blob for a forced download
+      const signedUrl = await s3.getSignedUrlPromise('getObject', {
+        Bucket: AWS_CONFIG.bucketName,
+        Key: f.s3Key,
+        Expires: 300,
+        ResponseContentDisposition: `attachment; filename=\"${encodeURIComponent(f.name)}\"`,
+        ResponseContentType: f.type || 'application/octet-stream'
+      });
+
+      let blob;
       try {
-        // Update last visited time in Firestore
-        await db.collection(`users/${uid}/files`).doc(id).update({
-          lastVisited: firebase.firestore.Timestamp.now()
-        });
-        
-        const url = s3.getSignedUrl('getObject', {
-          Bucket: AWS_CONFIG.bucketName,
-          Key: f.s3Key,
-          Expires: 60
-        });
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = f.name;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        
-        showNotification(`⬇ Downloading: ${f.name}`);
-      } catch (error) {
-        console.error('Download error:', error);
-        showNotification('Download failed', 3000);
+        const resp = await fetch(signedUrl);
+        if (!resp.ok) throw new Error(`Fetch failed: ${resp.status}`);
+        blob = await resp.blob();
+      } catch (fetchErr) {
+        // Fallback: open the signed URL directly (avoids CORS-blocked fetch)
+        console.warn('Fetch download failed, trying direct link', fetchErr);
+        const direct = document.createElement('a');
+        direct.href = signedUrl;
+        direct.download = f.name;
+        direct.target = '_blank';
+        document.body.appendChild(direct);
+        direct.click();
+        direct.remove();
+        showNotification(`Download started: ${f.name}`);
+        return;
       }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = f.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      
+      showNotification(`Downloaded: ${f.name}`);
+    } catch (error) {
+      console.error('Download error:', error);
+      showNotification('Download failed. Check AWS permissions or CORS on the bucket.', 4000);
     }
   }
 
